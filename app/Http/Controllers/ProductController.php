@@ -1,30 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function lowStock(Request $request): JsonResponse
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        $request->validate([
-            'threshold' => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        $threshold = $request->integer('threshold', config('inventory.low_stock_threshold'));
-
-        $products = Product::query()
-            ->where('stock_quantity', '<=', $threshold)
-            ->orderBy('stock_quantity')
-            ->get();
+        $product = Product::query()->create($request->validated());
 
         return response()->json([
-            'data' => $products->map(fn (Product $product) => $this->formatProduct($product))->all(),
-        ]);
+            'data' => $this->formatProduct($product),
+        ], 201);
     }
 
     /**

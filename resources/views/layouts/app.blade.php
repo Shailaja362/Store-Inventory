@@ -27,6 +27,8 @@
         @yield('content')
     </main>
 
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex w-full max-w-xs flex-col gap-2"></div>
+
     @stack('scripts')
 </body>
 </html>

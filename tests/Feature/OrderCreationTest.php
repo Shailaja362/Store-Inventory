@@ -29,6 +29,7 @@ class OrderCreationTest extends TestCase
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 3],
             ],
+            'amount_paid' => 500,
         ]);
 
         $response->assertCreated();
@@ -68,9 +69,11 @@ class OrderCreationTest extends TestCase
 
         $this->postJson('/api/orders', [
             'customer_email' => 'existing@example.com',
+            'customer_name' => 'Ignored Name',
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 1],
             ],
+            'amount_paid' => 100,
         ])->assertCreated();
 
         $this->assertSame(1, Customer::where('email', 'existing@example.com')->count());
@@ -89,11 +92,61 @@ class OrderCreationTest extends TestCase
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 1],
             ],
+            'amount_paid' => 100,
         ]);
 
         $response->assertCreated();
         $response->assertJsonPath('data.customer.id', $customer->id);
         $this->assertSame(1, Customer::count());
+    }
+
+    public function test_it_records_amount_paid_and_computes_the_balance(): void
+    {
+        Bus::fake();
+
+        $product = Product::factory()->create(['price' => 100, 'tax_percentage' => 0, 'stock_quantity' => 10]);
+
+        $response = $this->postJson('/api/orders', [
+            'customer_email' => 'payer@example.com',
+            'customer_name' => 'Payer',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 2],
+            ],
+            'amount_paid' => 250,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.amount_paid', '250.00');
+        $response->assertJsonPath('data.balance', '50.00');
+
+        $this->assertDatabaseHas('orders', ['amount_paid' => 250]);
+    }
+
+    public function test_it_requires_an_amount_paid(): void
+    {
+        $product = Product::factory()->create(['stock_quantity' => 10]);
+
+        $this->postJson('/api/orders', [
+            'customer_email' => 'no.payment@example.com',
+            'customer_name' => 'No Payment',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+        ])->assertJsonValidationErrors('amount_paid');
+    }
+
+    public function test_it_requires_amount_paid_to_be_at_least_one(): void
+    {
+        $product = Product::factory()->create(['stock_quantity' => 10]);
+
+        $this->postJson('/api/orders', [
+            'customer_email' => 'no.payment@example.com',
+            'customer_name' => 'No Payment',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+            'amount_paid' => 0,
+        ])->assertJsonValidationErrors('amount_paid');
     }
 
     public function test_it_rejects_an_order_when_requested_quantity_exceeds_stock(): void
@@ -108,6 +161,7 @@ class OrderCreationTest extends TestCase
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 5],
             ],
+            'amount_paid' => 100,
         ]);
 
         $response->assertUnprocessable();
@@ -129,7 +183,21 @@ class OrderCreationTest extends TestCase
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 1],
             ],
+            'amount_paid' => 100,
         ])->assertJsonValidationErrors('customer_name');
+    }
+
+    public function test_it_requires_an_email_when_no_customer_id_is_given(): void
+    {
+        $product = Product::factory()->create(['stock_quantity' => 10]);
+
+        $this->postJson('/api/orders', [
+            'customer_name' => 'No Email',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+            'amount_paid' => 100,
+        ])->assertJsonValidationErrors('customer_email');
     }
 
     public function test_it_requires_at_least_one_item(): void
@@ -138,6 +206,7 @@ class OrderCreationTest extends TestCase
             'customer_email' => 'shopper@example.com',
             'customer_name' => 'Shopper',
             'items' => [],
+            'amount_paid' => 100,
         ])->assertJsonValidationErrors('items');
     }
 
@@ -154,6 +223,7 @@ class OrderCreationTest extends TestCase
                 ['product_id' => $product->id, 'quantity' => 2],
                 ['product_id' => $product->id, 'quantity' => 3],
             ],
+            'amount_paid' => 500,
         ]);
 
         $response->assertCreated();

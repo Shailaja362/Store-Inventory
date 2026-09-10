@@ -25,7 +25,7 @@ class OrderService
      * every request to avoid lock-ordering deadlocks between orders that
      * share multiple products.
      *
-     * @param  array{customer_id: ?int, customer_email: ?string, customer_name: ?string, items: array<int, array{product_id: int, quantity: int}>}  $data
+     * @param  array{customer_id: ?int, customer_email: ?string, customer_name: ?string, items: array<int, array{product_id: int, quantity: int}>, amount_paid: float}  $data
      *
      * @throws InsufficientStockException
      */
@@ -81,6 +81,7 @@ class OrderService
                 'subtotal' => $subtotal,
                 'tax_total' => $taxTotal,
                 'grand_total' => $subtotal + $taxTotal,
+                'amount_paid' => $data['amount_paid'] ?? null,
             ]);
 
             foreach ($lineData as $line) {

@@ -18,6 +18,7 @@ class Order extends Model
         'subtotal',
         'tax_total',
         'grand_total',
+        'amount_paid',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Order extends Model
             'subtotal' => 'decimal:2',
             'tax_total' => 'decimal:2',
             'grand_total' => 'decimal:2',
+            'amount_paid' => 'decimal:2',
         ];
     }
 

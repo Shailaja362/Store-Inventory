@@ -43,6 +43,13 @@
             <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt><dd>{{ number_format($order->subtotal, 2) }}</dd></div>
             <div class="flex justify-between"><dt class="text-slate-500">Tax</dt><dd>{{ number_format($order->tax_total, 2) }}</dd></div>
             <div class="flex justify-between border-t border-slate-200 pt-2 font-semibold"><dt>Grand Total</dt><dd>{{ number_format($order->grand_total, 2) }}</dd></div>
+            @if (! is_null($order->amount_paid))
+                <div class="flex justify-between"><dt class="text-slate-500">Amount Paid</dt><dd>{{ number_format($order->amount_paid, 2) }}</dd></div>
+                <div class="flex justify-between">
+                    <dt class="text-slate-500">{{ $order->amount_paid >= $order->grand_total ? 'Balance Returned' : 'Balance Due' }}</dt>
+                    <dd>{{ number_format(abs($order->amount_paid - $order->grand_total), 2) }}</dd>
+                </div>
+            @endif
         </dl>
     </section>
 
