@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class OrderService
 {
@@ -31,7 +32,7 @@ class OrderService
      */
     public function createOrder(array $data): Order
     {
-        return DB::transaction(function () use ($data) {
+        $order = DB::transaction(function () use ($data) {
             $customer = $this->resolveCustomer(
                 $data['customer_id'] ?? null,
                 $data['customer_email'] ?? null,
@@ -116,6 +117,15 @@ class OrderService
 
             return $order->load('customer', 'items.product');
         });
+
+        Log::info('Order created', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'customer_id' => $order->customer_id,
+            'grand_total' => $order->grand_total,
+        ]);
+
+        return $order;
     }
 
     private function resolveCustomer(?int $customerId, ?string $email, ?string $name): Customer

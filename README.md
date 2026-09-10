@@ -82,7 +82,17 @@ php artisan key:generate
 
 > If you are using the Docker-only workflow and PHP/Composer are not installed on your machine, you can generate the application key inside the container after it starts instead.
 
-## 4. Start the Docker containers
+## 4. Start the Docker Containers
+
+Before running the following command, make sure **Docker is installed and Docker Desktop is running** on your system.
+
+You can verify that Docker is available by running:
+
+```bash
+docker --version
+```
+
+Once Docker is running, start the application with:
 
 ```bash
 docker compose up -d --build
@@ -92,15 +102,16 @@ This will:
 
 * Build the Laravel application image
 * Start the MySQL container
-* Run the database migrations
+* Run the database migrations and seeders
 * Start the Laravel application
-* Start the queue worker for order confirmation jobs
+* Start the queue worker for processing order confirmation jobs
 
-The application will be available at:
+The application will then be available at:
 
 ```text
 http://localhost:8000
 ```
+
 
 ## 5. View application logs
 

@@ -40,6 +40,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:80"
+    volumes:
+      - ./storage:/var/www/html/storage
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -52,6 +54,8 @@ services:
   queue:
     <<: *app-image
     restart: unless-stopped
+    volumes:
+      - ./storage:/var/www/html/storage
     depends_on:
       migrate:
         condition: service_completed_successfully
