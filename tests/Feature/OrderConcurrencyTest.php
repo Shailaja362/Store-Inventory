@@ -3,6 +3,11 @@
 namespace Tests\Feature;
 
 use App\Exceptions\InsufficientStockException;
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\StockMovement;
 use App\Services\OrderService;
 use Illuminate\Support\Facades\DB;
 use PDOException;
@@ -15,7 +20,7 @@ use Throwable;
  * race-safe requires genuine row locking between two independent database
  * sessions, which an in-memory sqlite connection cannot provide.
  *
- * Two techniques are used:
+ * Three techniques are used:
  *  - test_lockforupdate_blocks_a_second_connection_until_the_first_commits
  *    proves the underlying mechanism: a `lockForUpdate` row lock held by one
  *    connection makes a second, independent connection's lock attempt fail
@@ -23,6 +28,13 @@ use Throwable;
  *  - test_two_concurrent_order_attempts_never_oversell_the_last_unit runs
  *    the real OrderService from two forked OS processes racing for the same
  *    single unit of stock, and asserts exactly one succeeds.
+ *  - test_concurrent_order_creation_never_assigns_a_duplicate_order_number
+ *    forks a batch of processes that all create an order at the same
+ *    instant and asserts every `order_number` came out distinct. The real
+ *    guarantee is the unique index on `orders.order_number` — this proves
+ *    the random-number-with-retry logic in Order::assignOrderNumber()
+ *    actually engages that guarantee correctly under real concurrency,
+ *    rather than assuming it from reading the code.
  */
 class OrderConcurrencyTest extends TestCase
 {
@@ -52,17 +64,15 @@ class OrderConcurrencyTest extends TestCase
 
     protected function tearDown(): void
     {
-        $connection = DB::connection(self::CONNECTION);
-
         if ($this->productId) {
-            $connection->table('stock_movements')->where('product_id', $this->productId)->delete();
-            $connection->table('order_items')->where('product_id', $this->productId)->delete();
-            $connection->table('products')->where('id', $this->productId)->delete();
+            StockMovement::on(self::CONNECTION)->where('product_id', $this->productId)->delete();
+            OrderItem::on(self::CONNECTION)->where('product_id', $this->productId)->delete();
+            Product::on(self::CONNECTION)->where('id', $this->productId)->delete();
         }
 
         if ($this->customerIds !== []) {
-            $connection->table('orders')->whereIn('customer_id', $this->customerIds)->delete();
-            $connection->table('customers')->whereIn('id', $this->customerIds)->delete();
+            Order::on(self::CONNECTION)->whereIn('customer_id', $this->customerIds)->delete();
+            Customer::on(self::CONNECTION)->whereIn('id', $this->customerIds)->delete();
         }
 
         DB::purge(self::CONNECTION);
@@ -82,7 +92,7 @@ class OrderConcurrencyTest extends TestCase
         ]);
 
         DB::connection($connectionA)->beginTransaction();
-        DB::connection($connectionA)->table('products')->where('id', $this->productId)->lockForUpdate()->first();
+        Product::on($connectionA)->where('id', $this->productId)->lockForUpdate()->first();
 
         DB::connection($connectionB)->statement('SET SESSION innodb_lock_wait_timeout = 1');
 
@@ -90,14 +100,14 @@ class OrderConcurrencyTest extends TestCase
 
         try {
             DB::connection($connectionB)->beginTransaction();
-            DB::connection($connectionB)->table('products')->where('id', $this->productId)->lockForUpdate()->first();
+            Product::on($connectionB)->where('id', $this->productId)->lockForUpdate()->first();
             DB::connection($connectionB)->commit();
         } catch (PDOException) {
             $secondConnectionWasBlocked = true;
             DB::connection($connectionB)->rollBack();
         }
 
-        DB::connection($connectionA)->table('products')->where('id', $this->productId)->update(['stock_quantity' => 0]);
+        Product::on($connectionA)->where('id', $this->productId)->update(['stock_quantity' => 0]);
         DB::connection($connectionA)->commit();
 
         $this->assertTrue(
@@ -105,7 +115,7 @@ class OrderConcurrencyTest extends TestCase
             'A second connection was able to lock a row already locked by an uncommitted transaction — stock could be oversold.',
         );
 
-        $freshStock = DB::connection($connectionB)->table('products')->where('id', $this->productId)->value('stock_quantity');
+        $freshStock = Product::on($connectionB)->where('id', $this->productId)->value('stock_quantity');
         $this->assertSame(0, (int) $freshStock);
 
         DB::purge($connectionA);
@@ -154,17 +164,71 @@ class OrderConcurrencyTest extends TestCase
             'Expected exactly one of the two concurrent order attempts to succeed and the other to fail cleanly. Got: '.json_encode([$resultA, $resultB]),
         );
 
-        $finalStock = DB::connection(self::CONNECTION)->table('products')->where('id', $this->productId)->value('stock_quantity');
+        $finalStock = Product::on(self::CONNECTION)->where('id', $this->productId)->value('stock_quantity');
         $this->assertSame(0, (int) $finalStock, 'Stock must never go negative or be double-decremented.');
 
-        $orderCount = DB::connection(self::CONNECTION)->table('order_items')->where('product_id', $this->productId)->count();
+        $orderCount = OrderItem::on(self::CONNECTION)->where('product_id', $this->productId)->count();
         $this->assertSame(1, $orderCount, 'Exactly one order line should have been created for the single unit of stock.');
 
         foreach ([$emailA, $emailB] as $email) {
-            $customerId = DB::connection(self::CONNECTION)->table('customers')->where('email', $email)->value('id');
+            $customerId = Customer::on(self::CONNECTION)->where('email', $email)->value('id');
 
             if ($customerId) {
                 $this->customerIds[] = $customerId;
+            }
+        }
+    }
+
+    public function test_concurrent_order_creation_never_assigns_a_duplicate_order_number(): void
+    {
+        if (! function_exists('pcntl_fork')) {
+            $this->markTestSkipped('pcntl extension is required to simulate concurrent processes.');
+        }
+
+        $processCount = 8;
+        $this->productId = $this->seedProduct(stock: $processCount);
+
+        $pids = [];
+        $resultFiles = [];
+
+        for ($i = 0; $i < $processCount; $i++) {
+            $email = 'order-number-racer-'.$i.'-'.uniqid().'@example.com';
+            $resultFile = tempnam(sys_get_temp_dir(), 'order_number_race_');
+            $resultFiles[] = $resultFile;
+
+            $pid = pcntl_fork();
+
+            if ($pid === 0) {
+                $this->attemptOrderInChildProcess($email, $resultFile);
+            }
+
+            $pids[] = $pid;
+        }
+
+        foreach ($pids as $pid) {
+            pcntl_waitpid($pid, $status);
+        }
+
+        $results = array_map(fn (string $file) => json_decode(file_get_contents($file), true), $resultFiles);
+        array_walk($resultFiles, fn (string $file) => @unlink($file));
+
+        $orderNumbers = array_column($results, 'order_number');
+
+        $this->assertSame(
+            $processCount,
+            count(array_filter($orderNumbers)),
+            'Not every concurrent order attempt succeeded: '.json_encode($results),
+        );
+
+        $this->assertSame(
+            $processCount,
+            count(array_unique($orderNumbers)),
+            'Two concurrently created orders ended up with the same order_number: '.json_encode($orderNumbers),
+        );
+
+        foreach ($results as $result) {
+            if (! empty($result['customer_id'])) {
+                $this->customerIds[] = $result['customer_id'];
             }
         }
     }
@@ -183,7 +247,12 @@ class OrderConcurrencyTest extends TestCase
                 ],
             ]);
 
-            file_put_contents($resultFile, json_encode(['status' => 'success', 'order_id' => $order->id]));
+            file_put_contents($resultFile, json_encode([
+                'status' => 'success',
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'customer_id' => $order->customer_id,
+            ]));
         } catch (InsufficientStockException) {
             file_put_contents($resultFile, json_encode(['status' => 'insufficient_stock']));
         } catch (Throwable $exception) {
@@ -195,14 +264,12 @@ class OrderConcurrencyTest extends TestCase
 
     private function seedProduct(int $stock): int
     {
-        return DB::connection(self::CONNECTION)->table('products')->insertGetId([
+        return Product::on(self::CONNECTION)->create([
             'name' => 'Concurrency Test Product',
             'code' => 'RACE-'.uniqid(),
             'price' => 10,
             'tax_percentage' => 0,
             'stock_quantity' => $stock,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        ])->id;
     }
 }

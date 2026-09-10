@@ -14,12 +14,14 @@ return new class extends Migration
             $table->decimal('subtotal', 12, 2);
             $table->decimal('tax_total', 12, 2);
             $table->decimal('grand_total', 12, 2);
+            $table->decimal('amount_paid', 12, 2)->nullable();
+            $table->string('order_number', 20)->nullable();
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('orders');
+        // Schema::dropIfExists('orders');
     }
 };

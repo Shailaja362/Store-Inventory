@@ -198,7 +198,7 @@
     {{-- Bill preview --}}
     <section id="bill-preview" class="mb-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm hidden">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-slate-900">Bill Preview &mdash; Order #<span id="bill-order-id"></span></h2>
+            <h2 class="text-base font-semibold text-slate-900">Bill Preview &mdash; Order <span id="bill-order-id"></span></h2>
             <div class="flex items-center gap-3">
                 <a id="bill-download-pdf" href="#" class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4">

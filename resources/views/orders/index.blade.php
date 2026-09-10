@@ -15,6 +15,7 @@
         <table class="min-w-full divide-y divide-slate-200 text-sm">
             <thead class="bg-slate-50">
                 <tr class="text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <th class="px-4 py-3">S.NO</th>
                     <th class="px-4 py-3">Order #</th>
                     <th class="px-4 py-3">Customer</th>
                     <th class="px-4 py-3">Email</th>
@@ -27,7 +28,8 @@
             <tbody class="divide-y divide-slate-100">
                 @forelse ($orders as $order)
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-medium text-slate-900">#{{ $order->id }}</td>
+                        <td class="px-4 py-3 text-slate-500">{{ $loop->iteration }}</td>
+                        <td class="px-4 py-3 font-medium text-slate-900">{{ $order->order_number }}</td>
                         <td class="px-4 py-3">{{ $order->customer->name }}</td>
                         <td class="px-4 py-3 text-slate-500">{{ $order->customer->email }}</td>
                         <td class="px-4 py-3 text-center">{{ $order->items_count }}</td>

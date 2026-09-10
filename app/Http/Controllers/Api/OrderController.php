@@ -59,6 +59,7 @@ class OrderController extends Controller
     /**
      * @return array{
      *     id: int,
+     *     order_number: string,
      *     customer: array{id: int, name: string, email: string},
      *     items: array<int, array{
      *         id: int,
@@ -84,6 +85,7 @@ class OrderController extends Controller
     {
         return [
             'id' => $order->id,
+            'order_number' => $order->order_number,
             'customer' => [
                 'id' => $order->customer->id,
                 'name' => $order->customer->name,

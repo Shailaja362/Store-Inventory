@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Order #' . $order->id)
+@section('title', 'Order ' . $order->order_number)
 
 @section('content')
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-semibold text-slate-900">Order #{{ $order->id }}</h1>
+        <h1 class="text-2xl font-semibold text-slate-900">Order {{ $order->order_number }}</h1>
         <a href="{{ route('orders.index') }}" class="text-sm text-slate-600 hover:underline">&larr; Back to orders</a>
     </div>
 

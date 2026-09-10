@@ -248,7 +248,7 @@ $(function () {
     }
 
     function renderBillPreview(order) {
-        $('#bill-order-id').text(order.id);
+        $('#bill-order-id').text(order.order_number);
         $('#bill-customer-name').text(order.customer.name);
         $('#bill-customer-email').text(order.customer.email);
 

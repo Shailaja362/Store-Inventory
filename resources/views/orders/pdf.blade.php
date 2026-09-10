@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Order #{{ $order->id }}</title>
+    <title>Order {{ $order->order_number }}</title>
     <style>
         body {
             font-family: "Helvetica", "Arial", sans-serif;
@@ -112,7 +112,7 @@
             </td>
             <td style="width: 50%; text-align: right;">
                 <div class="section-title">Order Details</div>
-                Order #{{ $order->id }}<br>
+                Order {{ $order->order_number }}<br>
                 {{ $order->created_at->format('d M Y, H:i') }}
             </td>
         </tr>

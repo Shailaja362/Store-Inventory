@@ -57,7 +57,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        session()->flash('success', "Order #{$order->id} created successfully.");
+        session()->flash('success', "Order {$order->order_number} created successfully.");
 
         return response()->json([
             'message' => 'Order created successfully.',
@@ -79,12 +79,13 @@ class OrderController extends Controller
 
         $pdf = Pdf::loadView('orders.pdf', compact('order'));
 
-        return $pdf->download("order-{$order->id}.pdf");
+        return $pdf->download("{$order->order_number}.pdf");
     }
 
     /**
      * @return array{
      *     id: int,
+     *     order_number: string,
      *     customer: array{id: int, name: string, email: string},
      *     items: array<int, array{
      *         id: int,
@@ -110,6 +111,7 @@ class OrderController extends Controller
     {
         return [
             'id' => $order->id,
+            'order_number' => $order->order_number,
             'customer' => [
                 'id' => $order->customer->id,
                 'name' => $order->customer->name,

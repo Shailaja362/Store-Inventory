@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SendOrderConfirmationEmail;
 use App\Models\Customer;
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -36,6 +37,7 @@ class OrderCreationTest extends TestCase
         $response->assertJsonPath('data.subtotal', '300.00');
         $response->assertJsonPath('data.tax_total', '30.00');
         $response->assertJsonPath('data.grand_total', '330.00');
+        $response->assertJsonPath('data.order_number', fn (string $orderNumber) => str_starts_with($orderNumber, 'ord'));
 
         $this->assertDatabaseHas('customers', [
             'email' => 'new.customer@example.com',
@@ -233,5 +235,30 @@ class OrderCreationTest extends TestCase
             'product_id' => $product->id,
             'quantity' => 5,
         ]);
+    }
+
+    public function test_each_order_gets_a_unique_order_number(): void
+    {
+        Bus::fake();
+
+        $product = Product::factory()->create(['stock_quantity' => 10]);
+
+        $payload = [
+            'customer_email' => 'repeat-buyer@example.com',
+            'customer_name' => 'Repeat Buyer',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 1],
+            ],
+            'amount_paid' => 100,
+        ];
+
+        $first = $this->postJson('/api/orders', $payload)->assertCreated();
+        $second = $this->postJson('/api/orders', $payload)->assertCreated();
+
+        $firstOrderNumber = $first->json('data.order_number');
+        $secondOrderNumber = $second->json('data.order_number');
+
+        $this->assertNotSame($firstOrderNumber, $secondOrderNumber);
+        $this->assertSame(2, Order::query()->distinct()->count('order_number'));
     }
 }
