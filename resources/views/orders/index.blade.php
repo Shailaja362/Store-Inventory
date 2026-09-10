@@ -73,6 +73,7 @@
             <table class="min-w-full divide-y divide-slate-100 text-sm">
                 <thead class="bg-slate-50/80">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th class="px-5 py-3 sm:px-6">S.No</th>
                         <th class="px-5 py-3 sm:px-6">Order</th>
                         <th class="px-4 py-3">Customer</th>
                         <th class="px-4 py-3 text-center">Items</th>
@@ -84,6 +85,11 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($orders as $order)
                         <tr class="transition-colors hover:bg-indigo-50/40">
+                            <td class="px-5 py-3.5 sm:px-6">
+                                <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-semibold text-slate-700">
+                                    {{ $loop->iteration }}
+                                </span>
+                            </td>
                             <td class="px-5 py-3.5 sm:px-6">
                                 <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 font-mono text-xs font-semibold text-slate-700">
                                     {{ $order->order_number }}
