@@ -1,18 +1,88 @@
 # Store Order & Inventory Mini-System
 
-A small Laravel app for a shop counter. It takes orders, keeps stock in sync, and logs a confirmation "email" for each order. There's a basic web UI and a JSON API.
-## Running it with Docker
+A small Laravel application designed for a shop counter. The system allows a single operator to manage customers, place orders, maintain product stock, and generate order confirmation records. It includes a web-based UI and a JSON API.
 
-You can skip installing PHP, MySQL, and Node yourself and use Docker instead.
+## Features
 
-First, still generate an app key locally:
+* Customer management
+* Product and stock management
+* Order creation
+* Automatic stock deduction when an order is placed
+* Protection against overselling
+* Low-stock product detection
+* Stock movement logging
+* Order history by customer email
+* Order confirmation job using Laravel queues
+* PDF invoice generation
+* JSON API endpoints
+* Automated tests
+* Docker support
+
+---
+
+# Requirements
+
+You can run the application in either of the following ways:
+
+1. **Using Docker** — recommended for an easier setup
+2. **Using a local PHP/MySQL/Node.js environment**
+
+## Docker Requirements
+
+* Docker
+* Docker Compose
+
+## Local Setup Requirements
+
+* PHP 8.3 or higher
+* Composer
+* MySQL
+* Node.js and npm
+
+> **Important:** MySQL is required for the complete test suite. Most tests use an in-memory SQLite database, but the concurrency test requires a real MySQL database.
+
+---
+
+# Running with Docker
+
+Docker is the recommended way to run the application because it provides the required PHP, MySQL, and queue-worker environment without requiring them to be installed separately on the host machine.
+
+## 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd Store-Inventory
+```
+
+## 2. Create the environment file
 
 ```bash
 cp .env.example .env
+```
+
+> If you are using Windows PowerShell, you can use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+## 3. Install Composer dependencies
+
+If the project is being set up without an existing `vendor` directory, install the PHP dependencies first:
+
+```bash
+composer install
+```
+
+Then generate the application key:
+
+```bash
 php artisan key:generate
 ```
 
-Then start everything:
+> If you are using the Docker-only workflow and PHP/Composer are not installed on your machine, you can generate the application key inside the container after it starts instead.
+
+## 4. Start the Docker containers
 
 ```bash
 docker compose up -d --build
@@ -20,118 +90,550 @@ docker compose up -d --build
 
 This will:
 
-- Build the app image
-- Start a MySQL container
-- Run migrations automatically
-- Start the app at [http://localhost:8000](http://localhost:8000)
-- Start a queue worker so confirmation emails get processed
+* Build the Laravel application image
+* Start the MySQL container
+* Run the database migrations
+* Start the Laravel application
+* Start the queue worker for order confirmation jobs
 
-A few notes:
+The application will be available at:
 
-- The app container does not use the DB username/password from your `.env`. It uses its own fixed values set in `docker-compose.yml`. This avoids issues with special characters in passwords.
-- The MySQL port is not exposed to your machine by default. If you want to connect with a GUI tool, uncomment the `ports` line under `db` in `docker-compose.yml`.
-- To see logs: `docker compose logs -f app`
-- To stop everything and delete the database: `docker compose down -v`
+```text
+http://localhost:8000
+```
 
-## What you need for without docker setup
+## 5. View application logs
 
-- PHP 8.3+
-- Composer
-- Node.js + npm
-- MySQL
+```bash
+docker compose logs -f app
+```
 
-MySQL is needed, not just SQLite. One test checks that stock can't be oversold, and that needs a real second database connection. SQLite can't do that.
+To view all container logs:
 
-## Setup
+```bash
+docker compose logs -f
+```
+
+## 6. Stop the application
+
+```bash
+docker compose down
+```
+
+To stop the containers and remove the database volume:
+
+```bash
+docker compose down -v
+```
+
+> **Warning:** `docker compose down -v` deletes the MySQL database created by Docker.
+
+---
+
+# Docker Database Configuration
+
+The application container uses the database credentials defined in `docker-compose.yml`.
+
+The application does not rely on the host machine's MySQL credentials when running through Docker.
+
+This keeps the Docker setup predictable and avoids issues caused by special characters or different database credentials in the local `.env` file.
+
+By default, the MySQL port is not exposed to the host machine.
+
+If you want to connect to the Docker MySQL database using a GUI tool such as MySQL Workbench or DBeaver, uncomment the `ports` configuration under the `db` service in `docker-compose.yml`.
+
+---
+
+# Running Without Docker
+
+If you prefer to run the application directly on your machine, make sure PHP, Composer, MySQL, Node.js, and npm are installed.
+
+## 1. Clone the repository
+
+```bash
+git clone <repository-url>
+cd Store-Inventory
+```
+
+## 2. Install PHP dependencies
+
+This step is required before running any `php artisan` command because Laravel needs the Composer-generated `vendor/autoload.php` file.
 
 ```bash
 composer install
+```
+
+## 3. Create the environment file
+
+```bash
 cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+## 4. Generate the Laravel application key
+
+```bash
 php artisan key:generate
 ```
 
-Open `.env` and set your database details:
+## 5. Configure MySQL
 
-```
+Open the `.env` file and configure your local MySQL database:
+
+```env
 DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
 DB_DATABASE=store_inventory
 DB_USERNAME=root
 DB_PASSWORD=your_password
 ```
 
-Then run:
+Create the database in MySQL before running the migrations.
+
+For example:
+
+```sql
+CREATE DATABASE store_inventory;
+```
+
+## 6. Run migrations and seed the database
 
 ```bash
 php artisan migrate --seed
+```
+
+## 7. Install frontend dependencies
+
+```bash
 npm install
+```
+
+## 8. Build frontend assets
+
+```bash
 npm run build
+```
+
+## 9. Start the Laravel application
+
+```bash
 php artisan serve
 ```
 
-The app creates a queued job when an order is placed (the confirmation email). Run a worker in another terminal so it actually gets processed:
+The application will be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+---
+
+# Queue Worker
+
+When an order is placed, the application dispatches a queued job to create the order confirmation email/log entry.
+
+When running the application locally, start the queue worker in a separate terminal:
 
 ```bash
 php artisan queue:work
 ```
 
-Or just run everything at once:
+Alternatively, you can use Laravel's development command:
 
 ```bash
 composer run dev
 ```
 
-That starts the server, the queue worker, log output, and Vite together.
+This starts the application server, queue worker, log output, and Vite development server together.
 
+---
 
-## Running the tests
+# Running the Tests
+
+Run the test suite with:
 
 ```bash
 php artisan test
 ```
 
-Most tests use an in-memory SQLite database. That's fast and works fine for almost everything.
+Most tests use an in-memory SQLite database because it is fast and suitable for most application-level tests.
 
-One test is different: `tests/Feature/OrderConcurrencyTest.php`. It checks that two people can't buy the last item in stock at the same time. To test that properly, it needs two real, separate database connections racing each other. SQLite can't simulate that, so this test connects to a real MySQL database and runs two order attempts in parallel using forked processes.
+## Concurrency Test
 
-If MySQL isn't available, or the `pcntl` PHP extension isn't installed, this one test is skipped. Everything else still runs normally.
+The following test is different:
 
-## API endpoints
+```text
+tests/Feature/OrderConcurrencyTest.php
+```
 
-| Method | Endpoint | What it does |
-|---|---|---|
-| POST | `/api/orders` | Creates an order. Send `customer_id` (or `customer_email` + `customer_name`), a list of `items` (`product_id`, `quantity`), and `amount_paid`. |
-| GET | `/api/orders/history?email=` | Returns a customer's past orders by email. Returns an empty list if the email is unknown. |
-| GET | `/api/products/low-stock?threshold=` | Returns products at or below the low-stock threshold. If `threshold` is left out, it uses `LOW_STOCK_THRESHOLD` from `.env` (default is 10). |
+This test verifies that two simultaneous order requests cannot purchase the same last item in stock.
 
-The web pages (`/orders`, `/products`) use their own routes, not this API. They share the same order logic underneath, so stock handling works the same either way.
+The test requires:
 
-## Prompt log & demo video
+* A real MySQL database
+* Two separate database connections
+* The PHP `pcntl` extension for process forking
 
-- AI prompt screenshots: [`/prompts`](./prompts)
-- Screen recording walkthrough: _add link here_
+SQLite is not suitable for accurately simulating this database concurrency scenario.
 
-## Assumptions & Design Decisions
+If MySQL is unavailable or the `pcntl` extension is not installed, the concurrency test is skipped while the remaining tests continue to run.
 
-A few things in the brief weren't fully spelled out, so here's what I assumed and why, plus a couple of technical calls worth explaining.
+---
 
-**Single operator, no login.** I read this as a tool for whoever's behind the counter, not a multi-user back office, so there's no authentication or roles — every page and endpoint is open. If this grew into something more people needed accounts for, Breeze/Fortify would slot in without much rework.
+# API Endpoints
 
-**Products can be added but not edited or deleted from the UI.** The brief is really about placing orders and keeping stock honest, not full product CRUD. Letting someone silently edit a price or stock count outside of an order felt like it needed its own audit trail rather than being bolted on quickly, so I left it out instead of doing it half right.
+| Method | Endpoint                             | Description                                                |
+| ------ | ------------------------------------ | ---------------------------------------------------------- |
+| POST   | `/api/orders`                        | Creates a new order                                        |
+| GET    | `/api/orders/history?email=`         | Returns a customer's order history                         |
+| GET    | `/api/products/low-stock?threshold=` | Returns products at or below the specified stock threshold |
 
-**Payment is full and upfront.** `amount_paid` is required on every order and the bill preview shows change due — I assumed a walk-in counter sale, paid in full at checkout, not partial payments or invoicing on credit. There's no balance-due tracking beyond a single order.
+## Create Order
 
-**Customers are matched by email.** The order form takes either a `customer_id` or a name + email. If that email already belongs to someone, the existing customer record is reused instead of creating a duplicate. Since there's no login, email seemed like the only reasonable natural key for a walk-in customer.
+```http
+POST /api/orders
+```
 
-On the implementation side, a few decisions are worth flagging:
+The request can contain either an existing `customer_id` or a customer's name and email.
 
-Overselling is prevented by locking the relevant product rows inside a database transaction before checking stock, and locking them in a fixed order (sorted by ID) so two orders sharing products don't deadlock each other. Whoever gets there first sees the real number; the other request either fails cleanly against the now-updated stock or gets retried automatically if it hits a deadlock. If the same product shows up twice in one order, the quantities are added together first — otherwise someone could split one big request into smaller ones to dodge the stock check.
+Example structure:
 
-I also added a stock movement log even though it wasn't explicitly asked for — it made testing the no-overselling rule much easier to reason about, and it gives a natural place to hang restocking/adjustments later without touching the schema again.
+```json
+{
+    "customer_id": 1,
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 2
+        }
+    ],
+    "amount_paid": 1000
+}
+```
 
-Tax is captured per order line rather than looked up live: each product has its own `tax_percentage`, and that rate (along with the unit price) gets copied onto the `order_items` row at the time of purchase. That way a past order — and its PDF — stays accurate even if the product's price or tax rate changes afterward.
+## Order History
 
-Order numbers are short random codes like `ord48213` rather than the raw auto-increment ID, mostly so the shop's order volume isn't obvious from the number and it's short enough to read off a printed invoice. A unique constraint plus a small retry loop handles the rare collision.
+```http
+GET /api/orders/history?email=customer@example.com
+```
 
-For the PDF invoices I went with `barryvdh/laravel-dompdf` over something like `wkhtmltopdf` since it's pure PHP with no external binary to install — one less moving part for a project this size, and one less thing to configure in Docker.
+If the email does not exist, the API returns an empty order list.
 
-API responses are built with small private formatting methods on the controllers rather than Resource classes — for an API this small it was easier to read the exact response shape right where it's returned. And since there's no real mail server configured, the "confirmation email" is just a log entry written by `SendOrderConfirmationEmail`, dispatched only after the order transaction commits so it never fires for an order that failed.
+## Low Stock Products
+
+```http
+GET /api/products/low-stock
+```
+
+A custom threshold can also be provided:
+
+```http
+GET /api/products/low-stock?threshold=5
+```
+
+If no threshold is provided, the application uses the `LOW_STOCK_THRESHOLD` environment value. The default value is `10`.
+
+---
+
+# Web Routes
+
+The application also provides web-based pages for the shop counter.
+
+Main pages include:
+
+```text
+/orders
+/products
+```
+
+The web interface and API use the same underlying order and stock-handling logic to ensure that stock validation behaves consistently regardless of how an order is created.
+
+---
+
+# Prompt Log and Demo Video
+
+AI-assisted development was used during the development process.
+
+AI prompt screenshots are available in:
+
+```text
+/prompts
+```
+
+Screen recording walkthrough:
+
+```text
+<Add demo video link here>
+```
+
+---
+
+# Assumptions and Design Decisions
+
+## Single Operator
+
+The application is designed as a small shop-counter system operated by a single person.
+
+Therefore, authentication, user accounts, permissions, and roles were intentionally not added.
+
+If the application were expanded into a multi-user system, Laravel Breeze or Fortify could be introduced later.
+
+## Product Management
+
+Products can be added through the application, but editing and deleting products are intentionally not provided through the UI.
+
+The main purpose of the application is order processing and reliable stock management rather than complete product CRUD.
+
+Allowing users to modify historical product prices or stock directly would ideally require an audit trail, so I kept this functionality outside the scope of the mini-project.
+
+## Payment
+
+The application assumes that customers pay the full amount at checkout.
+
+`amount_paid` is required for each order, and the order summary displays the change due when applicable.
+
+Partial payments, credit sales, and outstanding balances are outside the scope of this project.
+
+## Customer Matching
+
+Customers are identified by email.
+
+When an order is created using a customer's name and email, the application checks whether the email already belongs to an existing customer.
+
+If a matching customer exists, that customer record is reused instead of creating a duplicate.
+
+---
+
+# Preventing Overselling
+
+Stock validation is performed inside a database transaction.
+
+The relevant product rows are locked before the application checks and updates stock quantities.
+
+Products are locked in a consistent ID order to reduce the possibility of deadlocks when multiple orders contain overlapping products.
+
+If two orders attempt to purchase the same limited stock at the same time, one transaction obtains the lock first and updates the stock. The other transaction then sees the updated quantity and fails cleanly if insufficient stock remains.
+
+Deadlock handling is also included so a transaction can be retried when the database reports a deadlock.
+
+If the same product appears multiple times in a single order, its quantities are combined before stock validation. This prevents a customer from bypassing the stock check by submitting the same product multiple times in one request.
+
+---
+
+# Stock Movement Logging
+
+The application records stock movements whenever stock changes.
+
+Although a stock movement log was not explicitly required, it provides a clear audit trail for stock changes and makes the overselling logic easier to test and understand.
+
+It also provides a foundation for future features such as:
+
+* Stock restocking
+* Manual stock adjustments
+* Stock history
+* Inventory auditing
+
+---
+
+# Order Pricing and Tax
+
+Each product has its own tax percentage.
+
+When an order is created, the product's current unit price and tax percentage are copied to the corresponding `order_items` record.
+
+This ensures that historical orders remain accurate even if the product's price or tax rate changes later.
+
+The generated invoice therefore reflects the values that were applicable at the time the order was placed.
+
+---
+
+# Order Numbers
+
+Orders use short, human-readable random identifiers such as:
+
+```text
+ord48213
+```
+
+instead of exposing the database auto-increment ID.
+
+This makes order numbers easier to read and prevents customers from easily estimating the total number of orders from the order number.
+
+A unique database constraint and retry mechanism are used to handle the unlikely possibility of a generated order-number collision.
+
+---
+
+# PDF Invoice
+
+PDF invoices are generated using:
+
+```text
+barryvdh/laravel-dompdf
+```
+
+I selected this package instead of a solution such as `wkhtmltopdf` because it is PHP-based and does not require an additional external binary.
+
+This keeps the project simpler to configure and deploy, particularly in a Docker environment.
+
+---
+
+# API Response Design
+
+The API responses are formatted using small private formatting methods inside the controllers rather than separate Laravel API Resource classes.
+
+For a small API with a limited number of response structures, keeping the formatting close to the controller makes the response format easy to understand and maintain.
+
+If the API grows significantly, dedicated API Resource classes could be introduced.
+
+---
+
+# Order Confirmation
+
+When an order is successfully created, a queued job named:
+
+```text
+SendOrderConfirmationEmail
+```
+
+is dispatched after the database transaction has successfully committed.
+
+There is no external mail server configured for this project.
+
+Therefore, the confirmation email is represented by a log entry rather than an actual email being sent.
+
+Dispatching the job only after the transaction commits ensures that a failed order does not trigger a confirmation notification.
+
+---
+
+# Technology Stack
+
+* **Backend:** Laravel / PHP
+* **Database:** MySQL
+* **Frontend:** Blade, JavaScript, CSS
+* **Build Tool:** Vite
+* **Queue:** Laravel Queue
+* **PDF:** DomPDF
+* **Testing:** PHPUnit / Laravel Test Suite
+* **Containerization:** Docker / Docker Compose
+* **API:** REST-style JSON API
+
+---
+
+# Project Setup Troubleshooting
+
+## `vendor/autoload.php` not found
+
+If you see:
+
+```text
+Failed to open stream: No such file or directory
+vendor/autoload.php
+```
+
+install the Composer dependencies:
+
+```bash
+composer install
+```
+
+Then run:
+
+```bash
+php artisan key:generate
+```
+
+## `.env` file does not exist
+
+Create it from the example file:
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then generate the application key:
+
+```bash
+php artisan key:generate
+```
+
+## Database connection error
+
+Check the following values in `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=store_inventory
+DB_USERNAME=root
+DB_PASSWORD=your_password
+```
+
+Make sure MySQL is running and that the database exists.
+
+## Frontend assets are missing
+
+Run:
+
+```bash
+npm install
+npm run build
+```
+
+For development with Vite:
+
+```bash
+npm run dev
+```
+
+---
+
+# Project Structure
+
+The main application components are organized using Laravel's standard structure:
+
+```text
+app/
+├── Http/
+│   └── Controllers/
+├── Jobs/
+├── Models/
+└── ...
+
+database/
+├── migrations/
+├── seeders/
+└── ...
+
+resources/
+├── views/
+└── ...
+
+routes/
+├── api.php
+└── web.php
+
+tests/
+├── Feature/
+└── Unit/
+```
+
+---
+
+# Conclusion
+
+This project was designed to demonstrate a practical Laravel implementation for a small shop-counter workflow, with particular attention to reliable stock management, transactional order processing, API design, queued jobs, testing, and maintainability.
+
+The implementation intentionally avoids unnecessary complexity while providing a foundation that could be extended with authentication, roles, product CRUD, payment integrations, real email delivery, reporting, and advanced inventory management in a larger production system.
