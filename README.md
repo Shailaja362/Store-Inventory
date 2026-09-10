@@ -1,8 +1,39 @@
 # Store Order & Inventory Mini-System
 
 A small Laravel app for a shop counter. It takes orders, keeps stock in sync, and logs a confirmation "email" for each order. There's a basic web UI and a JSON API.
+## Running it with Docker
 
-## What you need
+You can skip installing PHP, MySQL, and Node yourself and use Docker instead.
+
+First, still generate an app key locally:
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Then start everything:
+
+```bash
+docker compose up -d --build
+```
+
+This will:
+
+- Build the app image
+- Start a MySQL container
+- Run migrations automatically
+- Start the app at [http://localhost:8000](http://localhost:8000)
+- Start a queue worker so confirmation emails get processed
+
+A few notes:
+
+- The app container does not use the DB username/password from your `.env`. It uses its own fixed values set in `docker-compose.yml`. This avoids issues with special characters in passwords.
+- The MySQL port is not exposed to your machine by default. If you want to connect with a GUI tool, uncomment the `ports` line under `db` in `docker-compose.yml`.
+- To see logs: `docker compose logs -f app`
+- To stop everything and delete the database: `docker compose down -v`
+
+## What you need for without docker setup
 
 - PHP 8.3+
 - Composer
@@ -51,37 +82,6 @@ composer run dev
 
 That starts the server, the queue worker, log output, and Vite together.
 
-## Running it with Docker
-
-You can skip installing PHP, MySQL, and Node yourself and use Docker instead.
-
-First, still generate an app key locally:
-
-```bash
-cp .env.example .env
-php artisan key:generate
-```
-
-Then start everything:
-
-```bash
-docker compose up -d --build
-```
-
-This will:
-
-- Build the app image
-- Start a MySQL container
-- Run migrations automatically
-- Start the app at [http://localhost:8000](http://localhost:8000)
-- Start a queue worker so confirmation emails get processed
-
-A few notes:
-
-- The app container does not use the DB username/password from your `.env`. It uses its own fixed values set in `docker-compose.yml`. This avoids issues with special characters in passwords.
-- The MySQL port is not exposed to your machine by default. If you want to connect with a GUI tool, uncomment the `ports` line under `db` in `docker-compose.yml`.
-- To see logs: `docker compose logs -f app`
-- To stop everything and delete the database: `docker compose down -v`
 
 ## Running the tests
 
@@ -105,25 +105,33 @@ If MySQL isn't available, or the `pcntl` PHP extension isn't installed, this one
 
 The web pages (`/orders`, `/products`) use their own routes, not this API. They share the same order logic underneath, so stock handling works the same either way.
 
-## Notes on some decisions
+## Prompt log & demo video
 
-**New customer or existing one?**
-The order form accepts a `customer_id`, or a name and email. If the email already belongs to a customer, that customer is reused instead of creating a duplicate.
+- AI prompt screenshots: [`/prompts`](./prompts)
+- Screen recording walkthrough: _add link here_
 
-**How stock is protected from overselling.**
-When an order is created, the app locks the rows for every product in that order before checking stock, inside one database transaction. Products are locked in a fixed order (sorted by ID) so two orders sharing products don't deadlock each other. Whoever gets the lock first sees the real stock count. The other request either waits and then fails cleanly, or gets retried automatically if a deadlock happens.
+## Assumptions & Design Decisions
 
-**Same product listed twice in one order.**
-If a request lists the same product more than once, the quantities are added together before checking stock. This stops someone from splitting one big request into smaller ones to get around the stock check.
+A few things in the brief weren't fully spelled out, so here's what I assumed and why, plus a couple of technical calls worth explaining.
 
-**A stock movement history table.**
-This wasn't a strict requirement, but it felt necessary. Every stock change is logged with the amount changed and the stock before and after. It also made testing the "no overselling" rule easier.
+**Single operator, no login.** I read this as a tool for whoever's behind the counter, not a multi-user back office, so there's no authentication or roles — every page and endpoint is open. If this grew into something more people needed accounts for, Breeze/Fortify would slot in without much rework.
 
-**`amount_paid` is required.**
-The order screen shows change owed to the customer, so this field needs a value to calculate that.
+**Products can be added but not edited or deleted from the UI.** The brief is really about placing orders and keeping stock honest, not full product CRUD. Letting someone silently edit a price or stock count outside of an order felt like it needed its own audit trail rather than being bolted on quickly, so I left it out instead of doing it half right.
 
-**No API Resource classes.**
-Responses are built with small private methods in the controllers instead of Laravel Resource classes. For an API this small, it felt simpler to read the response shape directly where it's returned.
+**Payment is full and upfront.** `amount_paid` is required on every order and the bill preview shows change due — I assumed a walk-in counter sale, paid in full at checkout, not partial payments or invoicing on credit. There's no balance-due tracking beyond a single order.
 
-**Confirmation email is just a log entry.**
-No real mail server is set up, so `SendOrderConfirmationEmail` logs the order details instead of sending an email. It only runs after the order is fully saved, so it never fires for an order that fails.
+**Customers are matched by email.** The order form takes either a `customer_id` or a name + email. If that email already belongs to someone, the existing customer record is reused instead of creating a duplicate. Since there's no login, email seemed like the only reasonable natural key for a walk-in customer.
+
+On the implementation side, a few decisions are worth flagging:
+
+Overselling is prevented by locking the relevant product rows inside a database transaction before checking stock, and locking them in a fixed order (sorted by ID) so two orders sharing products don't deadlock each other. Whoever gets there first sees the real number; the other request either fails cleanly against the now-updated stock or gets retried automatically if it hits a deadlock. If the same product shows up twice in one order, the quantities are added together first — otherwise someone could split one big request into smaller ones to dodge the stock check.
+
+I also added a stock movement log even though it wasn't explicitly asked for — it made testing the no-overselling rule much easier to reason about, and it gives a natural place to hang restocking/adjustments later without touching the schema again.
+
+Tax is captured per order line rather than looked up live: each product has its own `tax_percentage`, and that rate (along with the unit price) gets copied onto the `order_items` row at the time of purchase. That way a past order — and its PDF — stays accurate even if the product's price or tax rate changes afterward.
+
+Order numbers are short random codes like `ord48213` rather than the raw auto-increment ID, mostly so the shop's order volume isn't obvious from the number and it's short enough to read off a printed invoice. A unique constraint plus a small retry loop handles the rare collision.
+
+For the PDF invoices I went with `barryvdh/laravel-dompdf` over something like `wkhtmltopdf` since it's pure PHP with no external binary to install — one less moving part for a project this size, and one less thing to configure in Docker.
+
+API responses are built with small private formatting methods on the controllers rather than Resource classes — for an API this small it was easier to read the exact response shape right where it's returned. And since there's no real mail server configured, the "confirmation email" is just a log entry written by `SendOrderConfirmationEmail`, dispatched only after the order transaction commits so it never fires for an order that failed.
