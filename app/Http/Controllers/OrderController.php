@@ -28,6 +28,14 @@ class OrderController extends Controller
             ->latest()
             ->paginate(15);
 
+        $this->data['stats'] = [
+            'total_orders' => Order::query()->count(),
+            'total_revenue' => Order::query()->sum('grand_total'),
+            'low_stock_count' => Product::query()
+                ->where('stock_quantity', '<=', config('inventory.low_stock_threshold'))
+                ->count(),
+        ];
+
         return view('orders.index', $this->data);
     }
 

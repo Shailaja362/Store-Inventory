@@ -19,13 +19,13 @@ $(function () {
 
     function showToast(message, variant) {
         var colors = {
-            warning: 'border-amber-300 bg-amber-50 text-amber-800',
-            error: 'border-red-300 bg-red-50 text-red-800',
-            info: 'border-red-300 bg-white text-red-600',
+            warning: 'border-amber-200 bg-amber-50 text-amber-800',
+            error: 'border-rose-200 bg-rose-50 text-rose-800',
+            info: 'border-indigo-200 bg-white text-indigo-700',
         };
 
         var $toast = $('<div></div>')
-            .addClass('rounded-md border px-4 py-3 text-sm shadow-lg transition-all duration-300 opacity-0 -translate-y-2')
+            .addClass('rounded-xl border px-4 py-3 text-sm font-medium shadow-lg shadow-slate-900/5 transition-all duration-300 opacity-0 -translate-y-2')
             .addClass(colors[variant] || colors.warning)
             .text(message);
 
@@ -136,22 +136,22 @@ $(function () {
 
         var row = $(
             '<tr data-row-index="' + index + '" data-product-id="' + product.id + '">' +
-                '<td class="px-3 py-2">' +
+                '<td class="px-3 py-2.5">' +
                     '<input type="hidden" name="items[' + index + '][product_id]" value="' + product.id + '">' +
                     '<span class="font-medium text-slate-800">' + product.name + '</span> ' +
                     '<span class="text-slate-400">(' + product.code + ')</span>' +
                 '</td>' +
-                '<td class="px-3 py-2">' +
+                '<td class="px-3 py-2.5">' +
                     '<div class="flex items-center gap-1">' +
-                        '<button type="button" class="qty-decrement inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50" aria-label="Decrease quantity">&minus;</button>' +
-                        '<input type="number" name="items[' + index + '][quantity]" class="qty-input block w-14 rounded-md border border-slate-300 px-2 py-1.5 text-center text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500" min="1" value="1" required>' +
-                        '<button type="button" class="qty-increment inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50" aria-label="Increase quantity">&plus;</button>' +
+                        '<button type="button" class="qty-decrement inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600" aria-label="Decrease quantity">&minus;</button>' +
+                        '<input type="number" name="items[' + index + '][quantity]" class="qty-input block w-14 rounded-lg border border-slate-300 px-2 py-1.5 text-center text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-3 focus:ring-indigo-500/15" min="1" value="1" required>' +
+                        '<button type="button" class="qty-increment inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600" aria-label="Increase quantity">&plus;</button>' +
                     '</div>' +
                 '</td>' +
-                '<td class="px-3 py-2 text-right price-cell">0.00</td>' +
-                '<td class="px-3 py-2 text-right line-total-cell font-medium">0.00</td>' +
-                '<td class="px-3 py-2 text-right">' +
-                    '<button type="button" class="remove-row text-slate-400 hover:text-red-600" title="Remove">&times;</button>' +
+                '<td class="px-3 py-2.5 text-right price-cell text-slate-600">0.00</td>' +
+                '<td class="px-3 py-2.5 text-right line-total-cell font-semibold text-slate-900">0.00</td>' +
+                '<td class="px-3 py-2.5 text-right">' +
+                    '<button type="button" class="remove-row flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Remove">&times;</button>' +
                 '</td>' +
             '</tr>'
         );
@@ -257,10 +257,10 @@ $(function () {
         order.items.forEach(function (item) {
             $items.append(
                 '<tr>' +
-                    '<td class="px-3 py-2">' + item.product_name + ' <span class="text-slate-400">(' + item.product_code + ')</span></td>' +
-                    '<td class="px-3 py-2 text-center">' + item.quantity + '</td>' +
-                    '<td class="px-3 py-2 text-right">' + money(item.unit_price) + '</td>' +
-                    '<td class="px-3 py-2 text-right font-medium">' + money(item.line_total) + '</td>' +
+                    '<td class="px-3 py-2.5">' + item.product_name + ' <span class="text-slate-400">(' + item.product_code + ')</span></td>' +
+                    '<td class="px-3 py-2.5 text-center">' + item.quantity + '</td>' +
+                    '<td class="px-3 py-2.5 text-right">' + money(item.unit_price) + '</td>' +
+                    '<td class="px-3 py-2.5 text-right font-semibold text-slate-900">' + money(item.line_total) + '</td>' +
                 '</tr>'
             );
         });

@@ -4,6 +4,35 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+::selection {
+    background-color: theme('colors.indigo.200');
+    color: theme('colors.indigo.950');
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: theme('colors.slate.300');
+    border-radius: 9999px;
+    border: 2px solid theme('colors.slate.50');
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.slate.400');
+}
+
+.bg-grid-pattern {
+    background-image: radial-gradient(circle, theme('colors.slate.300') 1px, transparent 1px);
+    background-size: 24px 24px;
 }
