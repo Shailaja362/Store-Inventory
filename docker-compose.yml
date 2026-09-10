@@ -31,7 +31,7 @@ services:
       db:
         condition: service_healthy
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
-    command: ["php", "artisan", "migrate", "--force"]
+    command: ["php", "artisan", "migrate", "--force", "--seed"]
     networks:
       - store-inventory
 

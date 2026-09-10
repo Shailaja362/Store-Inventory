@@ -57,7 +57,7 @@
         @csrf
 
         {{-- Customer card --}}
-        <section class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+        <section class="mb-6 rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
             <div class="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4 sm:px-6">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-[18px] w-[18px]">
@@ -101,7 +101,7 @@
 
         <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             {{-- Product card --}}
-            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60 lg:col-span-2">
+            <section class="rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60 lg:col-span-2">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4 sm:px-6">
                     <div class="flex items-center gap-2.5">
                         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
@@ -153,7 +153,7 @@
             </section>
 
             {{-- Low stock alert card --}}
-            <section class="self-start overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white shadow-sm shadow-amber-100/60">
+            <section class="self-start rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50 to-white shadow-sm shadow-amber-100/60">
                 <div class="flex items-center gap-2.5 border-b border-amber-200/70 px-5 py-4 sm:px-5">
                     <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-[18px] w-[18px]">
@@ -186,7 +186,7 @@
         </div>
 
         {{-- Payment --}}
-        <section class="mb-6 ml-auto max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+        <section class="mb-6 ml-auto max-w-sm rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
             <div class="border-b border-slate-100 bg-gradient-to-r from-slate-900 to-indigo-950 px-5 py-4">
                 <h2 class="text-base font-semibold text-white">Payment Summary</h2>
             </div>
@@ -232,7 +232,7 @@
     </form>
 
     {{-- Bill preview --}}
-    <section id="bill-preview" class="mb-6 hidden overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm shadow-emerald-100">
+    <section id="bill-preview" class="mb-6 hidden rounded-2xl border border-emerald-200 bg-white shadow-sm shadow-emerald-100">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50 px-5 py-4 sm:px-6">
             <h2 class="flex items-center gap-2 text-base font-semibold text-emerald-900">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 text-emerald-600">
