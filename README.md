@@ -380,7 +380,7 @@ AI prompt screenshots are available in:
 Screen recording walkthrough:
 
 ```text
-<Add demo video link here>
+https://drive.google.com/file/d/1jqfGmS2Yjia9WgOesIs8T8CXgOdH1Tj0/view?usp=sharing
 ```
 
 ---
